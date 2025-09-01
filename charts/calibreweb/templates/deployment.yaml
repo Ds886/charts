@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "calibreweb.fullname" . }}
+  labels:
+    {{- include "calibreweb.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "calibreweb.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "calibreweb.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "calibreweb.serviceAccountName" . }}
+      securityContext: {}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext: {}
+            {{/*{{- toYaml .Values.securityContext | nindent 12 }}*/}}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.podSecurityContext }}
+          env:
+            {{- if .Values.podSecurityContext.runAsUser }}
+            - name: PUID
+              value: {{ .Values.podSecurityContext.runAsUser | quote }}
+            {{- end }}
+            {{- if .Values.podSecurityContext.runAsGroup  | quote }}
+            - name: PGID
+              value: {{ .Values.podSecurityContext.runAsGroup  | quote }}
+            {{- end }}
+            - name: "TZ"
+              value: {{ .Values.config.tz | quote }}
+            - name: "NETWORK_SHARE_MODE"
+              value: {{ .Values.config.network_share_mode | toString | quote }}
+            - name: CWA_PORT_OVERRIDE
+              value: {{ .Values.service.port| toString | quote }}
+            {{- if .Values.hardcover }}
+            - name: HARDCOVER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.hardcover.secretName }}
+                  key: {{ .Values.hardcover.secretKey }}
+            {{- end }}
+          {{- end }}
+
+
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

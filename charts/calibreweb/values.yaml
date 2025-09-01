@@ -1,0 +1,128 @@
+# Default values for calibreweb.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: crocodilestick/calibre-web-automated
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "V3.1.4"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: 
+  runAsUser: 945 
+  runAsGroup: 945
+  fsGroup: 945
+
+securityContext:  {}
+
+service:
+  type: ClusterIP
+  port: 8083
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: yourhostname.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: {}
+
+hardcover:
+  secretName: "calibre-hardcover-token"
+  secretKey: "token"
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+config:
+  tz: "UTC"
+  network_share_mode: "false"
+extraEnv:
+  - name: TZ
+    value: "UTC"
+  - name: NETWORK_SHARE_MODE
+    value: "false"
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: 8083
+readinessProbe:
+  httpGet:
+    path: /
+    port: 8083
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Additional volumes on the output Deployment definition.
+volumes: 
+  - name: config
+    persistentVolumeClaim:
+            claimName: calibre-config-pvc
+  - name: lib
+    persistentVolumeClaim:
+            claimName: calibre-lib-pvc
+  - name: ingest
+    persistentVolumeClaim:
+            claimName: calibre-ingest-pvc
+  - name: plugins
+    persistentVolumeClaim:
+            claimName: calibre-plugins
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: 
+  - name: config
+    mountPath: "/config"
+    readOnly: false
+  - name: ingest
+    mountPath: "/cwa-book-ingest"
+    readOnly: false
+  - name: plugins
+    mountPath: "/config/.config/calibre/plugins"
+    readOnly: false
+  - name: lib
+    mountPath: "/calibre-library"
+    readOnly: false
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
